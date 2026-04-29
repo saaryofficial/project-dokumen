@@ -1,34 +1,81 @@
-const STORAGE_KEY='cgm_enterprise_v3';
-const defaultDB={clients:[],workers:[],payrolls:[],users:[],attendance:[],placements:[]}; let db=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||defaultDB;
-const el=(i)=>document.getElementById(i); const idr=(n)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0); const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(db)); const nid=(a)=>a.length?Math.max(...a.map(x=>x.id))+1:1;
-const menus=[['dashboard','Dashboard'],['ringkasan','Ringkasan Eksekutif'],['client','Client / Mitra'],['tenaga','Tenaga Kerja'],['penempatan','Penempatan'],['kehadiran','Kehadiran'],['payroll','Payroll'],['kinerja','Kinerja'],['keuangan','Keuangan'],['laporan','Laporan'],['pengaturan','Pengaturan']];
+const loginForm = document.getElementById('loginForm');
+const loginView = document.getElementById('loginView');
+const dashboardView = document.getElementById('dashboardView');
+const logoutBtn = document.getElementById('logoutBtn');
+const sidebarMenu = document.getElementById('sidebarMenu');
+const pageTitle = document.getElementById('pageTitle');
+const pageSubtitle = document.getElementById('pageSubtitle');
+const contentHost = document.getElementById('contentHost');
 
-function renderMenu(){el('sidebarMenu').innerHTML=menus.map((m,i)=>`<button class='menu-item ${i===0?'active':''}' data-menu='${m[0]}'>${m[1]}</button>`).join('')}
-function header(title){return `<div class='topbar'><div><h2>${title}</h2><small>PT. Catur Guna Mandiri</small></div><div class='filter-row'><input type='month' value='2025-05'><select><option>Semua Client</option>${db.clients.map(c=>`<option>${c.nama}</option>`).join('')}</select><small>Update: ${new Date().toLocaleString('id-ID')}</small></div></div>`}
-function kpis(){const aktif=db.workers.filter(w=>w.status==='Aktif').length; const total=db.workers.length; const client=db.clients.length; const payroll=db.payrolls.reduce((a,b)=>a+b.thp,0); return `<div class='kpis'>${[['Total Tenaga Kerja',total],['Aktif Bekerja',aktif],['Total Client',client],['Penempatan',db.placements.length],['Kehadiran',avgAttend()+'%'],['Total Payroll',idr(payroll)]].map(x=>`<div class='kpi'><small>${x[0]}</small><h3>${x[1]}</h3></div>`).join('')}</div>`}
-const avgAttend=()=>{if(!db.attendance.length)return 0; return (db.attendance.reduce((a,b)=>a+b.persen,0)/db.attendance.length).toFixed(1)};
+const menuConfig = [
+  { key: 'dashboard', label: 'Dashboard', title: 'Dashboard Operasional', subtitle: 'Pemantauan real-time layanan tenaga outsourcing untuk seluruh mitra.' },
+  { key: 'ringkasan', label: 'Ringkasan Eksekutif', title: 'Ringkasan Eksekutif', subtitle: 'Ikhtisar kinerja strategis perusahaan dan operasional.' },
+  { key: 'client', label: 'Client / Mitra', title: 'Client / Mitra', subtitle: 'Daftar mitra dan status kontrak layanan outsourcing.' },
+  { key: 'tenaga-kerja', label: 'Tenaga Kerja', title: 'Tenaga Kerja', subtitle: 'Data dan status tenaga kerja outsourcing.' },
+  { key: 'penempatan', label: 'Penempatan', title: 'Penempatan', subtitle: 'Distribusi dan monitoring penempatan tenaga kerja.' },
+  { key: 'kehadiran', label: 'Kehadiran', title: 'Kehadiran', subtitle: 'Pemantauan absensi dan kedisiplinan pekerja.' },
+  { key: 'payroll', label: 'Payroll', title: 'Payroll', subtitle: 'Pengelolaan gaji dan komponen pembayaran karyawan.' },
+  { key: 'keuangan', label: 'Keuangan', title: 'Keuangan', subtitle: 'Ringkasan finansial dan pembayaran client.' },
+  { key: 'laporan', label: 'Laporan', title: 'Laporan', subtitle: 'Pusat laporan operasional dan manajemen.' },
+  { key: 'pengaturan', label: 'Pengaturan', title: 'Pengaturan', subtitle: 'Pengaturan sistem, akses, dan konfigurasi akun.' }
+];
 
-function dashboard(){return header('DASHBOARD')+kpis()+`<div class='grid'><div class='panel'><h3>Ringkasan per Client</h3><table class='table'><thead><tr><th>Client</th><th>Jumlah TK</th><th>Aktif</th><th>Biaya Payroll</th></tr></thead><tbody>${db.clients.map(c=>{const ws=db.workers.filter(w=>w.client===c.nama);const pr=db.payrolls.filter(p=>p.client===c.nama).reduce((a,b)=>a+b.thp,0);return`<tr><td>${c.nama}</td><td>${ws.length}</td><td>${ws.filter(w=>w.status==='Aktif').length}</td><td>${idr(pr)}</td></tr>`}).join('')}</tbody></table></div><div class='panel'><h3>Status Tenaga Kerja</h3>${statusBar('Aktif',db.workers.filter(w=>w.status==='Aktif').length,db.workers.length)}${statusBar('Cuti',db.workers.filter(w=>w.status==='Cuti').length,db.workers.length)}${statusBar('Resign',db.workers.filter(w=>w.status==='Resign').length,db.workers.length)}</div></div>`}
-function statusBar(lbl,val,total){const p=total?Math.round((val/total)*100):0; return `<p>${lbl} ${val}</p><div class='bar'><span style='width:${p}%'></span></div>`}
+const menuContent = {
+  dashboard: `
+    <div class="cards-grid">
+      <article class="stat-card"><h3>Total Klien Aktif</h3><p>10 Perusahaan</p><small>PT. A s.d PT. J</small></article>
+      <article class="stat-card"><h3>Tenaga Kerja Aktif</h3><p>1.284 Orang</p><small>+42 bulan ini</small></article>
+      <article class="stat-card"><h3>Tingkat Kehadiran</h3><p>96.8%</p><small>Update: hari ini</small></article>
+      <article class="stat-card"><h3>Status Payroll</h3><p>Siap Diproses</p><small>Periode April 2026</small></article>
+    </div>
+    <div class="panel-grid">
+      <article class="panel"><h3>Daftar Client / Mitra</h3><ul class="client-list"><li>PT. A</li><li>PT. B</li><li>PT. C</li><li>PT. D</li><li>PT. E</li><li>PT. F</li><li>PT. G</li><li>PT. H</li><li>PT. I</li><li>PT. J</li></ul></article>
+      <article class="panel"><h3>Aktivitas Terbaru</h3><ul class="activity-list"><li>Penempatan baru 15 tenaga kerja ke PT. C.</li><li>Rekap kehadiran shift pagi selesai diproses.</li><li>Draft laporan keuangan mingguan tersedia.</li><li>Payroll batch #042 siap approval manajemen.</li></ul></article>
+    </div>`,
+  ringkasan: `<article class="panel"><h3>Ringkasan Eksekutif</h3><p class="desc">KPI utama perusahaan dan pencapaian periode berjalan.</p><ul class="activity-list"><li>Pendapatan jasa outsourcing naik 12% QoQ.</li><li>Retensi mitra strategis mencapai 98%.</li><li>SLA operasional tercapai 97.4%.</li></ul></article>`,
+  client: `<article class="panel"><h3>Client / Mitra</h3><p class="desc">Data mitra aktif dan status kontrak layanan.</p><ul class="client-list"><li>PT. A - Kontrak aktif</li><li>PT. B - Kontrak aktif</li><li>PT. C - Perpanjangan Q3</li><li>PT. D - Kontrak aktif</li><li>PT. E - Kontrak aktif</li><li>PT. F - Onboarding</li><li>PT. G - Kontrak aktif</li><li>PT. H - Kontrak aktif</li><li>PT. I - Audit SLA</li><li>PT. J - Kontrak aktif</li></ul></article>`,
+  'tenaga-kerja': `<article class="panel"><h3>Tenaga Kerja</h3><p class="desc">Pengelolaan data pekerja outsourcing.</p><div class="simple-grid"><div><strong>Total Workforce</strong><span>1.284</span></div><div><strong>Kontrak Akan Habis</strong><span>74</span></div><div><strong>Siap Penempatan</strong><span>112</span></div></div></article>`,
+  penempatan: `<article class="panel"><h3>Penempatan</h3><p class="desc">Monitoring distribusi tenaga kerja per client.</p><ul class="activity-list"><li>PT. A: 190 personel</li><li>PT. C: 210 personel</li><li>PT. F: 120 personel</li><li>PT. J: 98 personel</li></ul></article>`,
+  kehadiran: `<article class="panel"><h3>Kehadiran</h3><p class="desc">Rekap absensi harian, mingguan, dan bulanan.</p><div class="simple-grid"><div><strong>Hadir Hari Ini</strong><span>1.233</span></div><div><strong>Izin</strong><span>31</span></div><div><strong>Alpha</strong><span>20</span></div></div></article>`,
+  payroll: `<article class="panel"><h3>Payroll</h3><p class="desc">Pemrosesan gaji, tunjangan, dan potongan.</p><ul class="activity-list"><li>Periode: April 2026</li><li>Batch disiapkan: 12</li><li>Status approval: 9/12 selesai</li></ul></article>`,
+  keuangan: `<article class="panel"><h3>Keuangan</h3><p class="desc">Arus kas, tagihan, dan pembayaran client.</p><div class="simple-grid"><div><strong>Invoice Terbit</strong><span>Rp 4.2 M</span></div><div><strong>Pembayaran Masuk</strong><span>Rp 3.6 M</span></div><div><strong>Piutang Berjalan</strong><span>Rp 600 Jt</span></div></div></article>`,
+  laporan: `<article class="panel"><h3>Laporan</h3><p class="desc">Unduh laporan operasional dan manajerial.</p><ul class="activity-list"><li>Laporan kehadiran bulanan</li><li>Laporan payroll per client</li><li>Laporan SLA & produktivitas</li></ul></article>`,
+  pengaturan: `<article class="panel"><h3>Pengaturan</h3><p class="desc">Konfigurasi pengguna, role akses, dan preferensi sistem.</p><ul class="activity-list"><li>Manajemen akun admin</li><li>Hak akses berbasis peran</li><li>Template notifikasi</li></ul></article>`
+};
 
-function clientModule(){return header('CLIENT / MITRA')+kpis()+`<div class='panel'><h3>Input Data Client Real</h3><form id='clientForm' class='form-grid'><input type='hidden' id='clientId'><input id='clientNama' placeholder='Nama PT' required><input id='clientNpwp' placeholder='NPWP' required><input id='clientSektor' placeholder='Sektor' required><input id='clientLokasi' placeholder='Lokasi' required><input id='clientPic' placeholder='PIC' required><input id='clientEmail' type='email' placeholder='Email PIC' required><input id='clientTelp' placeholder='No HP PIC' required><select id='clientStatus'><option>Aktif</option><option>Perpanjangan</option><option>Review</option><option>Berakhir</option></select><button class='full'>Simpan Client</button></form><table class='table'><thead><tr><th>Client</th><th>Sektor</th><th>Lokasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.clients.map(c=>`<tr><td>${c.nama}</td><td>${c.sektor}</td><td>${c.lokasi}</td><td>${c.status}</td><td class='actions'><button class='btn-secondary' onclick='editClient(${c.id})'>Edit</button><button class='btn-danger' onclick='delClient(${c.id})'>Hapus</button></td></tr>`).join('')}</tbody></table></div>`}
-function tenagaModule(){return header('TENAGA KERJA')+kpis()+`<div class='panel'><h3>Input Data Tenaga Kerja Real</h3><form id='workerForm' class='form-grid'><input type='hidden' id='workerId'><input id='wNik' placeholder='NIK' required><input id='wNama' placeholder='Nama' required><select id='wClient'>${db.clients.map(c=>`<option>${c.nama}</option>`).join('')}</select><input id='wJabatan' placeholder='Jabatan' required><input id='wWilayah' placeholder='Wilayah' required><select id='wStatus'><option>Aktif</option><option>Cuti</option><option>Izin</option><option>Sakit</option><option>Resign</option></select><input id='wPokok' type='number' placeholder='Gaji Pokok' required><input id='wTunjangan' type='number' placeholder='Tunjangan' required><input id='wBpjs' type='number' placeholder='BPJS' required><button class='full'>Simpan Tenaga Kerja</button></form><table class='table'><thead><tr><th>NIK</th><th>Nama</th><th>Client</th><th>Status</th><th>Paket</th><th>Aksi</th></tr></thead><tbody>${db.workers.map(w=>`<tr><td>${w.nik}</td><td>${w.nama}</td><td>${w.client}</td><td>${w.status}</td><td>${idr(w.pokok+w.tunjangan)}</td><td class='actions'><button class='btn-secondary' onclick='editWorker(${w.id})'>Edit</button><button class='btn-danger' onclick='delWorker(${w.id})'>Hapus</button></td></tr>`).join('')}</tbody></table></div>`}
-function payrollModule(){return header('PAYROLL')+kpis()+`<div class='grid'><div class='panel'><h3>Hitung Payroll Real</h3><form id='payForm' class='form-grid'><input id='pPeriode' type='month' required><select id='pWorker'>${db.workers.map(w=>`<option value='${w.id}'>${w.nama} - ${w.client}</option>`).join('')}</select><input id='pHadir' type='number' placeholder='Hari hadir' required><input id='pLembur' type='number' placeholder='Jam lembur' required><input id='pInsentif' type='number' placeholder='Insentif' value='0'><input id='pPotongan' type='number' placeholder='Potongan lain' value='0'><button class='full'>Hitung & Simpan</button></form><p>Rumus THP = Pokok + Tunjangan + (Lembur x 25.000) + Insentif - BPJS - Potongan.</p></div><div class='panel'><h3>Rincian Payroll</h3><table class='table'><thead><tr><th>Periode</th><th>Nama</th><th>Client</th><th>THP</th><th>Aksi</th></tr></thead><tbody>${db.payrolls.map(p=>`<tr><td>${p.periode}</td><td>${p.nama}</td><td>${p.client}</td><td>${idr(p.thp)}</td><td><button class='btn-danger' onclick='delPay(${p.id})'>Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`}
-function simple(title){return header(title)+kpis()+`<div class='panel'><h3>${title}</h3><p>Modul analitik model sesuai desain dashboard. Data otomatis ditarik dari input real di Client, Tenaga Kerja, Payroll, dan Kehadiran.</p></div>`}
+function renderMenu() {
+  sidebarMenu.innerHTML = menuConfig
+    .map((menu, idx) => `<button class="menu-item ${idx === 0 ? 'active' : ''}" data-menu="${menu.key}">${menu.label}</button>`)
+    .join('');
+}
 
-function view(m){document.querySelectorAll('.menu-item').forEach(x=>x.classList.toggle('active',x.dataset.menu===m)); const map={dashboard:dashboard,ringkasan:()=>simple('RINGKASAN EKSEKUTIF'),client:clientModule,tenaga:tenagaModule,payroll:payrollModule,kehadiran:()=>simple('KEHADIRAN'),penempatan:()=>simple('PENEMPATAN'),kinerja:()=>simple('KINERJA'),keuangan:()=>simple('KEUANGAN'),laporan:()=>simple('LAPORAN'),pengaturan:()=>simple('PENGATURAN')}; el('contentHost').innerHTML=(map[m]||dashboard)(); bind(m)}
-function bind(m){if(m==='client')el('clientForm').onsubmit=saveClient;if(m==='tenaga')el('workerForm').onsubmit=saveWorker;if(m==='payroll')el('payForm').onsubmit=savePayroll}
-function saveClient(e){e.preventDefault();const id=+el('clientId').value;const d={id:id||nid(db.clients),nama:el('clientNama').value,npwp:el('clientNpwp').value,sektor:el('clientSektor').value,lokasi:el('clientLokasi').value,pic:el('clientPic').value,email:el('clientEmail').value,telp:el('clientTelp').value,status:el('clientStatus').value};db.clients=id?db.clients.map(x=>x.id===id?d:x):[...db.clients,d];save();view('client')}
-function editClient(id){const c=db.clients.find(x=>x.id===id);[['clientId',c.id],['clientNama',c.nama],['clientNpwp',c.npwp],['clientSektor',c.sektor],['clientLokasi',c.lokasi],['clientPic',c.pic],['clientEmail',c.email],['clientTelp',c.telp],['clientStatus',c.status]].forEach(([k,v])=>el(k).value=v)}
-function delClient(id){db.clients=db.clients.filter(x=>x.id!==id);save();view('client')}
-function saveWorker(e){e.preventDefault();const id=+el('workerId').value;const d={id:id||nid(db.workers),nik:el('wNik').value,nama:el('wNama').value,client:el('wClient').value,jabatan:el('wJabatan').value,wilayah:el('wWilayah').value,status:el('wStatus').value,pokok:+el('wPokok').value,tunjangan:+el('wTunjangan').value,bpjs:+el('wBpjs').value};db.workers=id?db.workers.map(x=>x.id===id?d:x):[...db.workers,d];save();view('tenaga')}
-function editWorker(id){const w=db.workers.find(x=>x.id===id);[['workerId',w.id],['wNik',w.nik],['wNama',w.nama],['wClient',w.client],['wJabatan',w.jabatan],['wWilayah',w.wilayah],['wStatus',w.status],['wPokok',w.pokok],['wTunjangan',w.tunjangan],['wBpjs',w.bpjs]].forEach(([k,v])=>el(k).value=v)}
-function delWorker(id){db.workers=db.workers.filter(x=>x.id!==id);save();view('tenaga')}
-function savePayroll(e){e.preventDefault();const w=db.workers.find(x=>x.id===+el('pWorker').value);if(!w)return;const lembur=+el('pLembur').value*25000;const ins=+el('pInsentif').value;const pot=+el('pPotongan').value;const thp=w.pokok+w.tunjangan+lembur+ins-w.bpjs-pot;db.payrolls=[...db.payrolls,{id:nid(db.payrolls),periode:el('pPeriode').value,nama:w.nama,client:w.client,thp}];save();view('payroll')}
-function delPay(id){db.payrolls=db.payrolls.filter(x=>x.id!==id);save();view('payroll')}
-window.editClient=editClient;window.delClient=delClient;window.editWorker=editWorker;window.delWorker=delWorker;window.delPay=delPay;
+function activateMenu(menuKey) {
+  const selectedMenu = menuConfig.find((menu) => menu.key === menuKey) || menuConfig[0];
+  document
+    .querySelectorAll('.menu-item')
+    .forEach((item) => item.classList.toggle('active', item.dataset.menu === selectedMenu.key));
+  pageTitle.textContent = selectedMenu.title;
+  pageSubtitle.textContent = selectedMenu.subtitle;
+  contentHost.innerHTML = menuContent[selectedMenu.key] ?? '<article class="panel"><h3>Data belum tersedia</h3></article>';
+}
 
-document.getElementById('loginForm').addEventListener('submit',(e)=>{e.preventDefault();el('loginView').classList.add('hidden');el('dashboardView').classList.remove('hidden');view('dashboard')});
-document.getElementById('logoutBtn').addEventListener('click',()=>{el('dashboardView').classList.add('hidden');el('loginView').classList.remove('hidden')});
-document.getElementById('sidebarMenu').addEventListener('click',(e)=>{const b=e.target.closest('.menu-item');if(b)view(b.dataset.menu)});
 renderMenu();
+activateMenu('dashboard');
+
+sidebarMenu.addEventListener('click', (event) => {
+  const menuItem = event.target.closest('.menu-item');
+  if (!menuItem) return;
+  activateMenu(menuItem.dataset.menu);
+});
+
+loginForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  loginView.classList.add('hidden');
+  dashboardView.classList.remove('hidden');
+  activateMenu('dashboard');
+});
+
+logoutBtn.addEventListener('click', () => {
+  dashboardView.classList.add('hidden');
+  loginView.classList.remove('hidden');
+});
