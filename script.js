@@ -64,3 +64,22 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{el('dashboard
 document.getElementById('sidebarMenu').addEventListener('click',(e)=>{const btn=e.target.closest('.menu-item'); if(btn) activateMenu(btn.dataset.menu);});
 
 renderMenu();
+activateMenu('dashboard');
+
+sidebarMenu.addEventListener('click', (event) => {
+  const menuItem = event.target.closest('.menu-item');
+  if (!menuItem) return;
+  activateMenu(menuItem.dataset.menu);
+});
+
+loginForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  loginView.classList.add('hidden');
+  dashboardView.classList.remove('hidden');
+  activateMenu('dashboard');
+});
+
+logoutBtn.addEventListener('click', () => {
+  dashboardView.classList.add('hidden');
+  loginView.classList.remove('hidden');
+});
