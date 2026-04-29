@@ -1,63 +1,67 @@
-const loginForm = document.getElementById('loginForm');
-const loginView = document.getElementById('loginView');
-const dashboardView = document.getElementById('dashboardView');
-const logoutBtn = document.getElementById('logoutBtn');
-const sidebarMenu = document.getElementById('sidebarMenu');
-const pageTitle = document.getElementById('pageTitle');
-const pageSubtitle = document.getElementById('pageSubtitle');
-const contentHost = document.getElementById('contentHost');
+const STORAGE_KEY = 'cgm_system_db_v2';
+const defaultDB = { clients: [], workers: [], payrolls: [], users: [] };
+let db = loadDB();
 
 const menuConfig = [
-  { key: 'dashboard', label: 'Dashboard', title: 'Dashboard Operasional', subtitle: 'Pemantauan real-time layanan tenaga outsourcing untuk seluruh mitra.' },
-  { key: 'ringkasan', label: 'Ringkasan Eksekutif', title: 'Ringkasan Eksekutif', subtitle: 'Ikhtisar kinerja strategis perusahaan dan operasional.' },
-  { key: 'client', label: 'Client / Mitra', title: 'Client / Mitra', subtitle: 'Daftar mitra dan status kontrak layanan outsourcing.' },
-  { key: 'tenaga-kerja', label: 'Tenaga Kerja', title: 'Tenaga Kerja', subtitle: 'Data dan status tenaga kerja outsourcing.' },
-  { key: 'penempatan', label: 'Penempatan', title: 'Penempatan', subtitle: 'Distribusi dan monitoring penempatan tenaga kerja.' },
-  { key: 'kehadiran', label: 'Kehadiran', title: 'Kehadiran', subtitle: 'Pemantauan absensi dan kedisiplinan pekerja.' },
-  { key: 'payroll', label: 'Payroll', title: 'Payroll', subtitle: 'Pengelolaan gaji dan komponen pembayaran karyawan.' },
-  { key: 'keuangan', label: 'Keuangan', title: 'Keuangan', subtitle: 'Ringkasan finansial dan pembayaran client.' },
-  { key: 'laporan', label: 'Laporan', title: 'Laporan', subtitle: 'Pusat laporan operasional dan manajemen.' },
-  { key: 'pengaturan', label: 'Pengaturan', title: 'Pengaturan', subtitle: 'Pengaturan sistem, akses, dan konfigurasi akun.' }
-];
+  ['dashboard', 'Dashboard'], ['ringkasan', 'Ringkasan Eksekutif'], ['client', 'Client / Mitra'], ['tenaga', 'Tenaga Kerja'],
+  ['penempatan', 'Penempatan'], ['kehadiran', 'Kehadiran'], ['payroll', 'Payroll'], ['keuangan', 'Keuangan'], ['laporan', 'Laporan'], ['pengaturan', 'Pengaturan']
+].map(([key, label]) => ({ key, label }));
 
-const menuContent = {
-  dashboard: `
-    <div class="cards-grid">
-      <article class="stat-card"><h3>Total Klien Aktif</h3><p>10 Perusahaan</p><small>PT. A s.d PT. J</small></article>
-      <article class="stat-card"><h3>Tenaga Kerja Aktif</h3><p>1.284 Orang</p><small>+42 bulan ini</small></article>
-      <article class="stat-card"><h3>Tingkat Kehadiran</h3><p>96.8%</p><small>Update: hari ini</small></article>
-      <article class="stat-card"><h3>Status Payroll</h3><p>Siap Diproses</p><small>Periode April 2026</small></article>
-    </div>
-    <div class="panel-grid">
-      <article class="panel"><h3>Daftar Client / Mitra</h3><ul class="client-list"><li>PT. A</li><li>PT. B</li><li>PT. C</li><li>PT. D</li><li>PT. E</li><li>PT. F</li><li>PT. G</li><li>PT. H</li><li>PT. I</li><li>PT. J</li></ul></article>
-      <article class="panel"><h3>Aktivitas Terbaru</h3><ul class="activity-list"><li>Penempatan baru 15 tenaga kerja ke PT. C.</li><li>Rekap kehadiran shift pagi selesai diproses.</li><li>Draft laporan keuangan mingguan tersedia.</li><li>Payroll batch #042 siap approval manajemen.</li></ul></article>
-    </div>`,
-  ringkasan: `<article class="panel"><h3>Ringkasan Eksekutif</h3><p class="desc">KPI utama perusahaan dan pencapaian periode berjalan.</p><ul class="activity-list"><li>Pendapatan jasa outsourcing naik 12% QoQ.</li><li>Retensi mitra strategis mencapai 98%.</li><li>SLA operasional tercapai 97.4%.</li></ul></article>`,
-  client: `<article class="panel"><h3>Client / Mitra</h3><p class="desc">Data mitra aktif dan status kontrak layanan.</p><ul class="client-list"><li>PT. A - Kontrak aktif</li><li>PT. B - Kontrak aktif</li><li>PT. C - Perpanjangan Q3</li><li>PT. D - Kontrak aktif</li><li>PT. E - Kontrak aktif</li><li>PT. F - Onboarding</li><li>PT. G - Kontrak aktif</li><li>PT. H - Kontrak aktif</li><li>PT. I - Audit SLA</li><li>PT. J - Kontrak aktif</li></ul></article>`,
-  'tenaga-kerja': `<article class="panel"><h3>Tenaga Kerja</h3><p class="desc">Pengelolaan data pekerja outsourcing.</p><div class="simple-grid"><div><strong>Total Workforce</strong><span>1.284</span></div><div><strong>Kontrak Akan Habis</strong><span>74</span></div><div><strong>Siap Penempatan</strong><span>112</span></div></div></article>`,
-  penempatan: `<article class="panel"><h3>Penempatan</h3><p class="desc">Monitoring distribusi tenaga kerja per client.</p><ul class="activity-list"><li>PT. A: 190 personel</li><li>PT. C: 210 personel</li><li>PT. F: 120 personel</li><li>PT. J: 98 personel</li></ul></article>`,
-  kehadiran: `<article class="panel"><h3>Kehadiran</h3><p class="desc">Rekap absensi harian, mingguan, dan bulanan.</p><div class="simple-grid"><div><strong>Hadir Hari Ini</strong><span>1.233</span></div><div><strong>Izin</strong><span>31</span></div><div><strong>Alpha</strong><span>20</span></div></div></article>`,
-  payroll: `<article class="panel"><h3>Payroll</h3><p class="desc">Pemrosesan gaji, tunjangan, dan potongan.</p><ul class="activity-list"><li>Periode: April 2026</li><li>Batch disiapkan: 12</li><li>Status approval: 9/12 selesai</li></ul></article>`,
-  keuangan: `<article class="panel"><h3>Keuangan</h3><p class="desc">Arus kas, tagihan, dan pembayaran client.</p><div class="simple-grid"><div><strong>Invoice Terbit</strong><span>Rp 4.2 M</span></div><div><strong>Pembayaran Masuk</strong><span>Rp 3.6 M</span></div><div><strong>Piutang Berjalan</strong><span>Rp 600 Jt</span></div></div></article>`,
-  laporan: `<article class="panel"><h3>Laporan</h3><p class="desc">Unduh laporan operasional dan manajerial.</p><ul class="activity-list"><li>Laporan kehadiran bulanan</li><li>Laporan payroll per client</li><li>Laporan SLA & produktivitas</li></ul></article>`,
-  pengaturan: `<article class="panel"><h3>Pengaturan</h3><p class="desc">Konfigurasi pengguna, role akses, dan preferensi sistem.</p><ul class="activity-list"><li>Manajemen akun admin</li><li>Hak akses berbasis peran</li><li>Template notifikasi</li></ul></article>`
-};
+const el = (id) => document.getElementById(id);
+const formatIDR = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(v) || 0);
+const today = () => new Date().toISOString().slice(0, 10);
 
-function renderMenu() {
-  sidebarMenu.innerHTML = menuConfig
-    .map((menu, idx) => `<button class="menu-item ${idx === 0 ? 'active' : ''}" data-menu="${menu.key}">${menu.label}</button>`)
-    .join('');
+function loadDB() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(defaultDB); } catch { return structuredClone(defaultDB); } }
+function saveDB() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+function nextId(arr) { return arr.length ? Math.max(...arr.map((x) => x.id)) + 1 : 1; }
+
+function renderMenu() { el('sidebarMenu').innerHTML = menuConfig.map((m, i) => `<button class="menu-item ${i===0?'active':''}" data-menu="${m.key}">${m.label}</button>`).join(''); }
+function setTitle(key) { const f = menuConfig.find((m) => m.key === key); el('pageTitle').textContent = f?.label || 'Dashboard'; el('pageSubtitle').textContent = `Modul ${f?.label || 'Dashboard'} siap untuk data operasional real.`; }
+
+function renderDashboard() {
+  const totalPayroll = db.payrolls.reduce((a, b) => a + b.takeHomePay, 0);
+  return `<div class="stats"><div class="stat"><h4>Client Aktif</h4><p>${db.clients.filter((c)=>c.status==='Aktif').length}</p></div><div class="stat"><h4>Total Tenaga Kerja</h4><p>${db.workers.length}</p></div><div class="stat"><h4>Total User Sistem</h4><p>${db.users.length}</p></div><div class="stat"><h4>Akumulasi THP</h4><p>${formatIDR(totalPayroll)}</p></div></div><div class="panel"><h3>Data Source</h3><p>Sistem memakai data real yang Anda input sendiri. Gunakan menu Client, Tenaga Kerja, Payroll, dan Pengaturan untuk mengisi data aktual perusahaan.</p></div>`;
 }
 
-function activateMenu(menuKey) {
-  const selectedMenu = menuConfig.find((menu) => menu.key === menuKey) || menuConfig[0];
-  document
-    .querySelectorAll('.menu-item')
-    .forEach((item) => item.classList.toggle('active', item.dataset.menu === selectedMenu.key));
-  pageTitle.textContent = selectedMenu.title;
-  pageSubtitle.textContent = selectedMenu.subtitle;
-  contentHost.innerHTML = menuContent[selectedMenu.key] ?? '<article class="panel"><h3>Data belum tersedia</h3></article>';
+function renderClients() {
+  return `<div class="panel"><h3>Master Data Client / Mitra (CRUD)</h3><form id="clientForm" class="form-grid"><input type="hidden" id="clientId"><input id="clientNama" placeholder="Nama Perusahaan" required><input id="clientNpwp" placeholder="NPWP" required><input id="clientAlamat" placeholder="Alamat Lengkap" class="full" required><input id="clientPic" placeholder="Nama PIC" required><input id="clientEmail" type="email" placeholder="Email PIC" required><input id="clientTelp" placeholder="No Telepon" required><input id="clientKontrakAwal" type="date" required><input id="clientKontrakAkhir" type="date" required><select id="clientStatus"><option>Aktif</option><option>Onboarding</option><option>Perpanjangan</option><option>Nonaktif</option></select><button class="full">Simpan Data Client</button></form><table class="table"><thead><tr><th>Perusahaan</th><th>PIC</th><th>Kontak</th><th>Kontrak</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.clients.map((c)=>`<tr><td>${c.nama}<br><small>${c.npwp}</small></td><td>${c.pic}</td><td>${c.email}<br>${c.telp}</td><td>${c.kontrakAwal} s/d ${c.kontrakAkhir}</td><td>${c.status}</td><td class="actions"><button class="btn-secondary" onclick="editClient(${c.id})">Edit</button><button class="btn-danger" onclick="deleteClient(${c.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
 }
+
+function renderWorkers() {
+  return `<div class="panel"><h3>Master Data Tenaga Kerja (CRUD)</h3><form id="workerForm" class="form-grid"><input type="hidden" id="workerId"><input id="workerNik" placeholder="NIK" required><input id="workerNama" placeholder="Nama Lengkap" required><select id="workerGender"><option>Laki-laki</option><option>Perempuan</option></select><input id="workerTglLahir" type="date" required><input id="workerAlamat" placeholder="Alamat" class="full" required><input id="workerNoHp" placeholder="No HP" required><input id="workerEmail" type="email" placeholder="Email" required><select id="workerClient">${db.clients.map((c)=>`<option value="${c.nama}">${c.nama}</option>`).join('')}</select><input id="workerJabatan" placeholder="Jabatan" required><input id="workerJoinDate" type="date" value="${today()}" required><input id="workerPokok" type="number" placeholder="Gaji Pokok" required><input id="workerTunjanganTetap" type="number" placeholder="Tunjangan Tetap" required><input id="workerTunjanganTransport" type="number" placeholder="Transport" required><input id="workerTunjanganMakan" type="number" placeholder="Makan" required><input id="workerBpjsKes" type="number" placeholder="BPJS Kesehatan" required><input id="workerBpjsTk" type="number" placeholder="BPJS Ketenagakerjaan" required><button class="full">Simpan Data Tenaga Kerja</button></form><table class="table"><thead><tr><th>Identitas</th><th>Penempatan</th><th>Jabatan</th><th>Paket Gaji</th><th>Aksi</th></tr></thead><tbody>${db.workers.map((w)=>`<tr><td>${w.nama}<br><small>NIK: ${w.nik}</small><br><small>${w.noHp}</small></td><td>${w.client}</td><td>${w.jabatan}</td><td>${formatIDR(w.gajiPokok+w.tunjanganTetap+w.tunjanganTransport+w.tunjanganMakan)}</td><td class="actions"><button class="btn-secondary" onclick="editWorker(${w.id})">Edit</button><button class="btn-danger" onclick="deleteWorker(${w.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderPayroll() {
+  return `<div class="grid-2"><div class="panel"><h3>Payroll Otomatis Lengkap</h3><form id="payrollForm" class="form-grid"><input id="payrollPeriode" type="month" required><select id="payrollWorker">${db.workers.map((w)=>`<option value="${w.id}">${w.nama} - ${w.client}</option>`).join('')}</select><input id="payrollHadir" type="number" placeholder="Hari Hadir" required><input id="payrollIzin" type="number" placeholder="Izin" value="0"><input id="payrollSakit" type="number" placeholder="Sakit" value="0"><input id="payrollAlpha" type="number" placeholder="Alpha" value="0"><input id="payrollLemburJam" type="number" placeholder="Jam Lembur" required><input id="payrollInsentif" type="number" placeholder="Insentif" value="0"><input id="payrollPotonganLain" type="number" placeholder="Potongan Lain" value="0"><button class="full btn-good">Hitung & Simpan Payroll</button></form><p>Formula: THP = (Gaji Pokok + Tunjangan Tetap + Transport + Makan + Insentif + Uang Lembur + Bonus Hadir) - (BPJS Kes + BPJS TK + Potongan Alpha + Potongan Lain). Bonus hadir Rp200.000 jika hadir >= 24.</p></div><div class="panel"><h3>Riwayat Payroll Detail</h3><table class="table"><thead><tr><th>Periode</th><th>Karyawan</th><th>Gaji Kotor</th><th>Potongan</th><th>THP</th><th>Aksi</th></tr></thead><tbody>${db.payrolls.map((p)=>`<tr><td>${p.periode}</td><td>${p.nama}</td><td>${formatIDR(p.grossPay)}</td><td>${formatIDR(p.totalDeduction)}</td><td>${formatIDR(p.takeHomePay)}</td><td><button class="btn-danger" onclick="deletePayroll(${p.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function renderUsers() { return `<div class="panel"><h3>Pengaturan User (CRUD)</h3><form id="userForm" class="form-grid"><input type="hidden" id="userId"><input id="userNama" placeholder="Nama Lengkap" required><input id="userEmail" type="email" placeholder="Email" required><input id="userUsername" placeholder="Username" required><input id="userJabatan" placeholder="Jabatan" required><select id="userRole"><option>Admin</option><option>HR</option><option>Finance</option><option>Supervisor</option></select><select id="userStatus"><option>Aktif</option><option>Nonaktif</option></select><button class="full">Simpan User</button></form><table class="table"><thead><tr><th>Nama</th><th>Akun</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.users.map((u)=>`<tr><td>${u.nama}<br><small>${u.jabatan}</small></td><td>${u.username}<br><small>${u.email}</small></td><td>${u.role}</td><td>${u.status}</td><td class="actions"><button class="btn-secondary" onclick="editUser(${u.id})">Edit</button><button class="btn-danger" onclick="deleteUser(${u.id})">Hapus</button></td></tr>`).join('')}</tbody></table><div class="actions"><button class="btn-secondary" onclick="exportData()">Export JSON</button><button class="btn-secondary" onclick="importPrompt()">Import JSON</button><button class="btn-danger" onclick="resetData()">Reset Semua Data</button></div></div>`; }
+
+function renderModule(key) { if(['dashboard','ringkasan','keuangan','laporan','kehadiran','penempatan'].includes(key)) return renderDashboard(); if(key==='client') return renderClients(); if(key==='tenaga') return renderWorkers(); if(key==='payroll') return renderPayroll(); if(key==='pengaturan') return renderUsers(); return '<div class="panel">Modul belum tersedia.</div>'; }
+function activateMenu(key) { document.querySelectorAll('.menu-item').forEach((btn)=>btn.classList.toggle('active', btn.dataset.menu===key)); setTitle(key); el('contentHost').innerHTML = renderModule(key); bindForms(key); }
+function bindForms(key) { if(key==='client') el('clientForm').onsubmit = saveClient; if(key==='tenaga') el('workerForm').onsubmit = saveWorker; if(key==='payroll') el('payrollForm').onsubmit = savePayroll; if(key==='pengaturan') el('userForm').onsubmit = saveUser; }
+
+function saveClient(e){e.preventDefault(); const id=+el('clientId').value; const data={id:id||nextId(db.clients), nama:el('clientNama').value, npwp:el('clientNpwp').value, alamat:el('clientAlamat').value, pic:el('clientPic').value, email:el('clientEmail').value, telp:el('clientTelp').value, kontrakAwal:el('clientKontrakAwal').value, kontrakAkhir:el('clientKontrakAkhir').value, status:el('clientStatus').value}; db.clients=id?db.clients.map((x)=>x.id===id?data:x):[...db.clients,data]; saveDB(); activateMenu('client');}
+function editClient(id){const c=db.clients.find((x)=>x.id===id); Object.entries({clientId:c.id,clientNama:c.nama,clientNpwp:c.npwp,clientAlamat:c.alamat,clientPic:c.pic,clientEmail:c.email,clientTelp:c.telp,clientKontrakAwal:c.kontrakAwal,clientKontrakAkhir:c.kontrakAkhir,clientStatus:c.status}).forEach(([k,v])=>el(k).value=v);} function deleteClient(id){db.clients=db.clients.filter((x)=>x.id!==id); saveDB(); activateMenu('client');}
+
+function saveWorker(e){e.preventDefault(); const id=+el('workerId').value; const d={id:id||nextId(db.workers), nik:el('workerNik').value, nama:el('workerNama').value, gender:el('workerGender').value, tglLahir:el('workerTglLahir').value, alamat:el('workerAlamat').value, noHp:el('workerNoHp').value, email:el('workerEmail').value, client:el('workerClient').value, jabatan:el('workerJabatan').value, joinDate:el('workerJoinDate').value, gajiPokok:+el('workerPokok').value, tunjanganTetap:+el('workerTunjanganTetap').value, tunjanganTransport:+el('workerTunjanganTransport').value, tunjanganMakan:+el('workerTunjanganMakan').value, bpjsKes:+el('workerBpjsKes').value, bpjsTk:+el('workerBpjsTk').value}; db.workers=id?db.workers.map((x)=>x.id===id?d:x):[...db.workers,d]; saveDB(); activateMenu('tenaga');}
+function editWorker(id){const w=db.workers.find((x)=>x.id===id); Object.entries({workerId:w.id,workerNik:w.nik,workerNama:w.nama,workerGender:w.gender,workerTglLahir:w.tglLahir,workerAlamat:w.alamat,workerNoHp:w.noHp,workerEmail:w.email,workerClient:w.client,workerJabatan:w.jabatan,workerJoinDate:w.joinDate,workerPokok:w.gajiPokok,workerTunjanganTetap:w.tunjanganTetap,workerTunjanganTransport:w.tunjanganTransport,workerTunjanganMakan:w.tunjanganMakan,workerBpjsKes:w.bpjsKes,workerBpjsTk:w.bpjsTk}).forEach(([k,v])=>el(k).value=v);} function deleteWorker(id){db.workers=db.workers.filter((x)=>x.id!==id); saveDB(); activateMenu('tenaga');}
+
+function savePayroll(e){e.preventDefault(); const w=db.workers.find((x)=>x.id===+el('payrollWorker').value); if(!w) return; const hadir=+el('payrollHadir').value, izin=+el('payrollIzin').value, sakit=+el('payrollSakit').value, alpha=+el('payrollAlpha').value, lemburJam=+el('payrollLemburJam').value, insentif=+el('payrollInsentif').value, potonganLain=+el('payrollPotonganLain').value; const uangLembur=lemburJam*25000; const bonusHadir=hadir>=24?200000:0; const grossPay=w.gajiPokok+w.tunjanganTetap+w.tunjanganTransport+w.tunjanganMakan+insentif+uangLembur+bonusHadir; const potonganAlpha=alpha*50000; const totalDeduction=w.bpjsKes+w.bpjsTk+potonganAlpha+potonganLain; const takeHomePay=grossPay-totalDeduction; db.payrolls=[...db.payrolls,{id:nextId(db.payrolls),periode:el('payrollPeriode').value,nama:w.nama,hadir,izin,sakit,alpha,lemburJam,insentif,uangLembur,bonusHadir,grossPay,potonganAlpha,totalDeduction,takeHomePay}]; saveDB(); activateMenu('payroll');}
+function deletePayroll(id){db.payrolls=db.payrolls.filter((x)=>x.id!==id); saveDB(); activateMenu('payroll');}
+
+function saveUser(e){e.preventDefault(); const id=+el('userId').value; const d={id:id||nextId(db.users), nama:el('userNama').value, email:el('userEmail').value, username:el('userUsername').value, jabatan:el('userJabatan').value, role:el('userRole').value, status:el('userStatus').value}; db.users=id?db.users.map((x)=>x.id===id?d:x):[...db.users,d]; saveDB(); activateMenu('pengaturan');}
+function editUser(id){const u=db.users.find((x)=>x.id===id); Object.entries({userId:u.id,userNama:u.nama,userEmail:u.email,userUsername:u.username,userJabatan:u.jabatan,userRole:u.role,userStatus:u.status}).forEach(([k,v])=>el(k).value=v);} function deleteUser(id){db.users=db.users.filter((x)=>x.id!==id); saveDB(); activateMenu('pengaturan');}
+
+function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cgm-data-${today()}.json`;a.click();URL.revokeObjectURL(a.href);}
+function importPrompt(){const json=prompt('Paste JSON data:'); if(!json) return; try{const parsed=JSON.parse(json); if(parsed.clients&&parsed.workers&&parsed.payrolls&&parsed.users){db=parsed; saveDB(); activateMenu('dashboard'); alert('Import berhasil');} else alert('Format JSON tidak valid');}catch{alert('JSON tidak valid');}}
+function resetData(){if(confirm('Hapus seluruh data?')){db=structuredClone(defaultDB); saveDB(); activateMenu('dashboard');}}
+
+window.editClient=editClient; window.deleteClient=deleteClient; window.editWorker=editWorker; window.deleteWorker=deleteWorker; window.deletePayroll=deletePayroll; window.editUser=editUser; window.deleteUser=deleteUser; window.exportData=exportData; window.importPrompt=importPrompt; window.resetData=resetData;
+
+document.getElementById('loginForm').addEventListener('submit',(e)=>{e.preventDefault(); el('loginView').classList.add('hidden'); el('dashboardView').classList.remove('hidden'); activateMenu('dashboard');});
+document.getElementById('logoutBtn').addEventListener('click',()=>{el('dashboardView').classList.add('hidden'); el('loginView').classList.remove('hidden');});
+document.getElementById('sidebarMenu').addEventListener('click',(e)=>{const btn=e.target.closest('.menu-item'); if(btn) activateMenu(btn.dataset.menu);});
 
 renderMenu();
 activateMenu('dashboard');
