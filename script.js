@@ -1,10 +1,5 @@
-const STORAGE_KEY = 'cgm_system_db_v1';
-const defaultDB = {
-  clients: [{ id: 1, nama: 'PT. A', pic: 'Budi', status: 'Aktif' }],
-  workers: [{ id: 1, nama: 'Andi', client: 'PT. A', jabatan: 'Security', gajiPokok: 4500000, tunjangan: 500000, bpjs: 150000 }],
-  payrolls: [],
-  users: [{ id: 1, nama: 'Admin Utama', email: 'admin@caturgunamandiri.co.id', role: 'Admin' }]
-};
+const STORAGE_KEY = 'cgm_system_db_v2';
+const defaultDB = { clients: [], workers: [], payrolls: [], users: [] };
 let db = loadDB();
 
 const menuConfig = [
@@ -13,85 +8,83 @@ const menuConfig = [
 ].map(([key, label]) => ({ key, label }));
 
 const el = (id) => document.getElementById(id);
-const formatIDR = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v || 0);
+const formatIDR = (v) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(v) || 0);
+const today = () => new Date().toISOString().slice(0, 10);
 
 function loadDB() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || structuredClone(defaultDB); } catch { return structuredClone(defaultDB); } }
 function saveDB() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
 function nextId(arr) { return arr.length ? Math.max(...arr.map((x) => x.id)) + 1 : 1; }
 
-function renderMenu() {
-  el('sidebarMenu').innerHTML = menuConfig.map((m, i) => `<button class="menu-item ${i===0?'active':''}" data-menu="${m.key}">${m.label}</button>`).join('');
-}
-
-function setTitle(key) {
-  const found = menuConfig.find((m) => m.key === key);
-  el('pageTitle').textContent = found?.label || 'Dashboard';
-  el('pageSubtitle').textContent = `Modul ${found?.label || 'Dashboard'} siap dioperasikan.`;
-}
+function renderMenu() { el('sidebarMenu').innerHTML = menuConfig.map((m, i) => `<button class="menu-item ${i===0?'active':''}" data-menu="${m.key}">${m.label}</button>`).join(''); }
+function setTitle(key) { const f = menuConfig.find((m) => m.key === key); el('pageTitle').textContent = f?.label || 'Dashboard'; el('pageSubtitle').textContent = `Modul ${f?.label || 'Dashboard'} siap untuk data operasional real.`; }
 
 function renderDashboard() {
-  const totalGaji = db.payrolls.reduce((a, b) => a + b.takeHomePay, 0);
-  return `<div class="stats"><div class="stat"><h4>Total Client</h4><p>${db.clients.length}</p></div><div class="stat"><h4>Tenaga Kerja</h4><p>${db.workers.length}</p></div><div class="stat"><h4>User Sistem</h4><p>${db.users.length}</p></div><div class="stat"><h4>Total THP Payroll</h4><p>${formatIDR(totalGaji)}</p></div></div>`;
+  const totalPayroll = db.payrolls.reduce((a, b) => a + b.takeHomePay, 0);
+  return `<div class="stats"><div class="stat"><h4>Client Aktif</h4><p>${db.clients.filter((c)=>c.status==='Aktif').length}</p></div><div class="stat"><h4>Total Tenaga Kerja</h4><p>${db.workers.length}</p></div><div class="stat"><h4>Total User Sistem</h4><p>${db.users.length}</p></div><div class="stat"><h4>Akumulasi THP</h4><p>${formatIDR(totalPayroll)}</p></div></div><div class="panel"><h3>Data Source</h3><p>Sistem memakai data real yang Anda input sendiri. Gunakan menu Client, Tenaga Kerja, Payroll, dan Pengaturan untuk mengisi data aktual perusahaan.</p></div>`;
 }
 
 function renderClients() {
-  return `<div class="panel"><h3>CRUD Client / Mitra</h3><form id="clientForm" class="form-grid"><input type="hidden" id="clientId"><input id="clientNama" placeholder="Nama PT" required><input id="clientPic" placeholder="PIC" required><select id="clientStatus"><option>Aktif</option><option>Onboarding</option><option>Nonaktif</option></select><button>Simpan Client</button></form><table class="table"><thead><tr><th>Nama</th><th>PIC</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.clients.map((c)=>`<tr><td>${c.nama}</td><td>${c.pic}</td><td>${c.status}</td><td class="actions"><button class="btn-secondary" onclick="editClient(${c.id})">Edit</button><button class="btn-danger" onclick="deleteClient(${c.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="panel"><h3>Master Data Client / Mitra (CRUD)</h3><form id="clientForm" class="form-grid"><input type="hidden" id="clientId"><input id="clientNama" placeholder="Nama Perusahaan" required><input id="clientNpwp" placeholder="NPWP" required><input id="clientAlamat" placeholder="Alamat Lengkap" class="full" required><input id="clientPic" placeholder="Nama PIC" required><input id="clientEmail" type="email" placeholder="Email PIC" required><input id="clientTelp" placeholder="No Telepon" required><input id="clientKontrakAwal" type="date" required><input id="clientKontrakAkhir" type="date" required><select id="clientStatus"><option>Aktif</option><option>Onboarding</option><option>Perpanjangan</option><option>Nonaktif</option></select><button class="full">Simpan Data Client</button></form><table class="table"><thead><tr><th>Perusahaan</th><th>PIC</th><th>Kontak</th><th>Kontrak</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.clients.map((c)=>`<tr><td>${c.nama}<br><small>${c.npwp}</small></td><td>${c.pic}</td><td>${c.email}<br>${c.telp}</td><td>${c.kontrakAwal} s/d ${c.kontrakAkhir}</td><td>${c.status}</td><td class="actions"><button class="btn-secondary" onclick="editClient(${c.id})">Edit</button><button class="btn-danger" onclick="deleteClient(${c.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderWorkers() {
-  return `<div class="panel"><h3>CRUD Tenaga Kerja</h3><form id="workerForm" class="form-grid"><input type="hidden" id="workerId"><input id="workerNama" placeholder="Nama" required><input id="workerJabatan" placeholder="Jabatan" required><select id="workerClient">${db.clients.map((c)=>`<option>${c.nama}</option>`).join('')}</select><input id="workerPokok" type="number" placeholder="Gaji Pokok" required><input id="workerTunjangan" type="number" placeholder="Tunjangan" required><input id="workerBpjs" type="number" placeholder="BPJS" required><button>Simpan Tenaga Kerja</button></form><table class="table"><thead><tr><th>Nama</th><th>Client</th><th>Jabatan</th><th>Komponen Gaji</th><th>Aksi</th></tr></thead><tbody>${db.workers.map((w)=>`<tr><td>${w.nama}</td><td>${w.client}</td><td>${w.jabatan}</td><td>${formatIDR(w.gajiPokok)} + ${formatIDR(w.tunjangan)} - ${formatIDR(w.bpjs)}</td><td class="actions"><button class="btn-secondary" onclick="editWorker(${w.id})">Edit</button><button class="btn-danger" onclick="deleteWorker(${w.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="panel"><h3>Master Data Tenaga Kerja (CRUD)</h3><form id="workerForm" class="form-grid"><input type="hidden" id="workerId"><input id="workerNik" placeholder="NIK" required><input id="workerNama" placeholder="Nama Lengkap" required><select id="workerGender"><option>Laki-laki</option><option>Perempuan</option></select><input id="workerTglLahir" type="date" required><input id="workerAlamat" placeholder="Alamat" class="full" required><input id="workerNoHp" placeholder="No HP" required><input id="workerEmail" type="email" placeholder="Email" required><select id="workerClient">${db.clients.map((c)=>`<option value="${c.nama}">${c.nama}</option>`).join('')}</select><input id="workerJabatan" placeholder="Jabatan" required><input id="workerJoinDate" type="date" value="${today()}" required><input id="workerPokok" type="number" placeholder="Gaji Pokok" required><input id="workerTunjanganTetap" type="number" placeholder="Tunjangan Tetap" required><input id="workerTunjanganTransport" type="number" placeholder="Transport" required><input id="workerTunjanganMakan" type="number" placeholder="Makan" required><input id="workerBpjsKes" type="number" placeholder="BPJS Kesehatan" required><input id="workerBpjsTk" type="number" placeholder="BPJS Ketenagakerjaan" required><button class="full">Simpan Data Tenaga Kerja</button></form><table class="table"><thead><tr><th>Identitas</th><th>Penempatan</th><th>Jabatan</th><th>Paket Gaji</th><th>Aksi</th></tr></thead><tbody>${db.workers.map((w)=>`<tr><td>${w.nama}<br><small>NIK: ${w.nik}</small><br><small>${w.noHp}</small></td><td>${w.client}</td><td>${w.jabatan}</td><td>${formatIDR(w.gajiPokok+w.tunjanganTetap+w.tunjanganTransport+w.tunjanganMakan)}</td><td class="actions"><button class="btn-secondary" onclick="editWorker(${w.id})">Edit</button><button class="btn-danger" onclick="deleteWorker(${w.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderPayroll() {
-  return `<div class="grid-2"><div class="panel"><h3>Hitung Payroll Otomatis</h3><form id="payrollForm" class="form-grid"><select id="payrollWorker">${db.workers.map((w)=>`<option value="${w.id}">${w.nama} - ${w.client}</option>`).join('')}</select><input id="payrollHadir" type="number" placeholder="Hari Hadir" required><input id="payrollLemburJam" type="number" placeholder="Jam Lembur" required><input id="payrollPotongan" type="number" placeholder="Potongan Lain" value="0"><button class="btn-good">Hitung & Simpan Payroll</button></form><p>Rumus: THP = Gaji Pokok + Tunjangan + (LemburJam x 25.000) - BPJS - Potongan + Bonus Kehadiran (jika hadir ≥ 24 hari = 200.000)</p></div><div class="panel"><h3>Riwayat Payroll</h3><table class="table"><thead><tr><th>Nama</th><th>Hadir</th><th>Lembur</th><th>THP</th><th>Aksi</th></tr></thead><tbody>${db.payrolls.map((p)=>`<tr><td>${p.nama}</td><td>${p.hadir}</td><td>${p.lemburJam} jam</td><td>${formatIDR(p.takeHomePay)}</td><td><button class="btn-danger" onclick="deletePayroll(${p.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  return `<div class="grid-2"><div class="panel"><h3>Payroll Otomatis Lengkap</h3><form id="payrollForm" class="form-grid"><input id="payrollPeriode" type="month" required><select id="payrollWorker">${db.workers.map((w)=>`<option value="${w.id}">${w.nama} - ${w.client}</option>`).join('')}</select><input id="payrollHadir" type="number" placeholder="Hari Hadir" required><input id="payrollIzin" type="number" placeholder="Izin" value="0"><input id="payrollSakit" type="number" placeholder="Sakit" value="0"><input id="payrollAlpha" type="number" placeholder="Alpha" value="0"><input id="payrollLemburJam" type="number" placeholder="Jam Lembur" required><input id="payrollInsentif" type="number" placeholder="Insentif" value="0"><input id="payrollPotonganLain" type="number" placeholder="Potongan Lain" value="0"><button class="full btn-good">Hitung & Simpan Payroll</button></form><p>Formula: THP = (Gaji Pokok + Tunjangan Tetap + Transport + Makan + Insentif + Uang Lembur + Bonus Hadir) - (BPJS Kes + BPJS TK + Potongan Alpha + Potongan Lain). Bonus hadir Rp200.000 jika hadir >= 24.</p></div><div class="panel"><h3>Riwayat Payroll Detail</h3><table class="table"><thead><tr><th>Periode</th><th>Karyawan</th><th>Gaji Kotor</th><th>Potongan</th><th>THP</th><th>Aksi</th></tr></thead><tbody>${db.payrolls.map((p)=>`<tr><td>${p.periode}</td><td>${p.nama}</td><td>${formatIDR(p.grossPay)}</td><td>${formatIDR(p.totalDeduction)}</td><td>${formatIDR(p.takeHomePay)}</td><td><button class="btn-danger" onclick="deletePayroll(${p.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
-function renderUsers() {
-  return `<div class="panel"><h3>Pengaturan User (CRUD)</h3><form id="userForm" class="form-grid"><input type="hidden" id="userId"><input id="userNama" placeholder="Nama User" required><input id="userEmail" type="email" placeholder="Email" required><select id="userRole"><option>Admin</option><option>HR</option><option>Finance</option></select><button>Simpan User</button></form><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aksi</th></tr></thead><tbody>${db.users.map((u)=>`<tr><td>${u.nama}</td><td>${u.email}</td><td>${u.role}</td><td class="actions"><button class="btn-secondary" onclick="editUser(${u.id})">Edit</button><button class="btn-danger" onclick="deleteUser(${u.id})">Hapus</button></td></tr>`).join('')}</tbody></table></div>`;
-}
+function renderUsers() { return `<div class="panel"><h3>Pengaturan User (CRUD)</h3><form id="userForm" class="form-grid"><input type="hidden" id="userId"><input id="userNama" placeholder="Nama Lengkap" required><input id="userEmail" type="email" placeholder="Email" required><input id="userUsername" placeholder="Username" required><input id="userJabatan" placeholder="Jabatan" required><select id="userRole"><option>Admin</option><option>HR</option><option>Finance</option><option>Supervisor</option></select><select id="userStatus"><option>Aktif</option><option>Nonaktif</option></select><button class="full">Simpan User</button></form><table class="table"><thead><tr><th>Nama</th><th>Akun</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.users.map((u)=>`<tr><td>${u.nama}<br><small>${u.jabatan}</small></td><td>${u.username}<br><small>${u.email}</small></td><td>${u.role}</td><td>${u.status}</td><td class="actions"><button class="btn-secondary" onclick="editUser(${u.id})">Edit</button><button class="btn-danger" onclick="deleteUser(${u.id})">Hapus</button></td></tr>`).join('')}</tbody></table><div class="actions"><button class="btn-secondary" onclick="exportData()">Export JSON</button><button class="btn-secondary" onclick="importPrompt()">Import JSON</button><button class="btn-danger" onclick="resetData()">Reset Semua Data</button></div></div>`; }
 
-function renderModule(key) {
-  if (key === 'dashboard' || key === 'ringkasan' || key === 'keuangan' || key === 'laporan' || key === 'kehadiran' || key === 'penempatan') return renderDashboard();
-  if (key === 'client') return renderClients();
-  if (key === 'tenaga') return renderWorkers();
-  if (key === 'payroll') return renderPayroll();
-  if (key === 'pengaturan') return renderUsers();
-  return '<div class="panel">Modul belum tersedia.</div>';
-}
+function renderModule(key) { if(['dashboard','ringkasan','keuangan','laporan','kehadiran','penempatan'].includes(key)) return renderDashboard(); if(key==='client') return renderClients(); if(key==='tenaga') return renderWorkers(); if(key==='payroll') return renderPayroll(); if(key==='pengaturan') return renderUsers(); return '<div class="panel">Modul belum tersedia.</div>'; }
+function activateMenu(key) { document.querySelectorAll('.menu-item').forEach((btn)=>btn.classList.toggle('active', btn.dataset.menu===key)); setTitle(key); el('contentHost').innerHTML = renderModule(key); bindForms(key); }
+function bindForms(key) { if(key==='client') el('clientForm').onsubmit = saveClient; if(key==='tenaga') el('workerForm').onsubmit = saveWorker; if(key==='payroll') el('payrollForm').onsubmit = savePayroll; if(key==='pengaturan') el('userForm').onsubmit = saveUser; }
 
-function activateMenu(key) {
-  document.querySelectorAll('.menu-item').forEach((btn)=>btn.classList.toggle('active', btn.dataset.menu===key));
-  setTitle(key);
-  el('contentHost').innerHTML = renderModule(key);
-  bindForms(key);
-}
+function saveClient(e){e.preventDefault(); const id=+el('clientId').value; const data={id:id||nextId(db.clients), nama:el('clientNama').value, npwp:el('clientNpwp').value, alamat:el('clientAlamat').value, pic:el('clientPic').value, email:el('clientEmail').value, telp:el('clientTelp').value, kontrakAwal:el('clientKontrakAwal').value, kontrakAkhir:el('clientKontrakAkhir').value, status:el('clientStatus').value}; db.clients=id?db.clients.map((x)=>x.id===id?data:x):[...db.clients,data]; saveDB(); activateMenu('client');}
+function editClient(id){const c=db.clients.find((x)=>x.id===id); Object.entries({clientId:c.id,clientNama:c.nama,clientNpwp:c.npwp,clientAlamat:c.alamat,clientPic:c.pic,clientEmail:c.email,clientTelp:c.telp,clientKontrakAwal:c.kontrakAwal,clientKontrakAkhir:c.kontrakAkhir,clientStatus:c.status}).forEach(([k,v])=>el(k).value=v);} function deleteClient(id){db.clients=db.clients.filter((x)=>x.id!==id); saveDB(); activateMenu('client');}
 
-function bindForms(key) {
-  if (key === 'client') el('clientForm').onsubmit = saveClient;
-  if (key === 'tenaga') el('workerForm').onsubmit = saveWorker;
-  if (key === 'payroll') el('payrollForm').onsubmit = savePayroll;
-  if (key === 'pengaturan') el('userForm').onsubmit = saveUser;
-}
+function saveWorker(e){e.preventDefault(); const id=+el('workerId').value; const d={id:id||nextId(db.workers), nik:el('workerNik').value, nama:el('workerNama').value, gender:el('workerGender').value, tglLahir:el('workerTglLahir').value, alamat:el('workerAlamat').value, noHp:el('workerNoHp').value, email:el('workerEmail').value, client:el('workerClient').value, jabatan:el('workerJabatan').value, joinDate:el('workerJoinDate').value, gajiPokok:+el('workerPokok').value, tunjanganTetap:+el('workerTunjanganTetap').value, tunjanganTransport:+el('workerTunjanganTransport').value, tunjanganMakan:+el('workerTunjanganMakan').value, bpjsKes:+el('workerBpjsKes').value, bpjsTk:+el('workerBpjsTk').value}; db.workers=id?db.workers.map((x)=>x.id===id?d:x):[...db.workers,d]; saveDB(); activateMenu('tenaga');}
+function editWorker(id){const w=db.workers.find((x)=>x.id===id); Object.entries({workerId:w.id,workerNik:w.nik,workerNama:w.nama,workerGender:w.gender,workerTglLahir:w.tglLahir,workerAlamat:w.alamat,workerNoHp:w.noHp,workerEmail:w.email,workerClient:w.client,workerJabatan:w.jabatan,workerJoinDate:w.joinDate,workerPokok:w.gajiPokok,workerTunjanganTetap:w.tunjanganTetap,workerTunjanganTransport:w.tunjanganTransport,workerTunjanganMakan:w.tunjanganMakan,workerBpjsKes:w.bpjsKes,workerBpjsTk:w.bpjsTk}).forEach(([k,v])=>el(k).value=v);} function deleteWorker(id){db.workers=db.workers.filter((x)=>x.id!==id); saveDB(); activateMenu('tenaga');}
 
-function saveClient(e){e.preventDefault(); const id=+el('clientId').value; const data={id:id||nextId(db.clients), nama:el('clientNama').value, pic:el('clientPic').value, status:el('clientStatus').value}; db.clients=id?db.clients.map((x)=>x.id===id?data:x):[...db.clients,data]; saveDB(); activateMenu('client');}
-function editClient(id){const c=db.clients.find((x)=>x.id===id); el('clientId').value=c.id; el('clientNama').value=c.nama; el('clientPic').value=c.pic; el('clientStatus').value=c.status;}
-function deleteClient(id){db.clients=db.clients.filter((x)=>x.id!==id); saveDB(); activateMenu('client');}
-
-function saveWorker(e){e.preventDefault(); const id=+el('workerId').value; const data={id:id||nextId(db.workers), nama:el('workerNama').value, client:el('workerClient').value, jabatan:el('workerJabatan').value, gajiPokok:+el('workerPokok').value, tunjangan:+el('workerTunjangan').value, bpjs:+el('workerBpjs').value}; db.workers=id?db.workers.map((x)=>x.id===id?data:x):[...db.workers,data]; saveDB(); activateMenu('tenaga');}
-function editWorker(id){const w=db.workers.find((x)=>x.id===id); el('workerId').value=w.id; el('workerNama').value=w.nama; el('workerClient').value=w.client; el('workerJabatan').value=w.jabatan; el('workerPokok').value=w.gajiPokok; el('workerTunjangan').value=w.tunjangan; el('workerBpjs').value=w.bpjs;}
-function deleteWorker(id){db.workers=db.workers.filter((x)=>x.id!==id); saveDB(); activateMenu('tenaga');}
-
-function savePayroll(e){e.preventDefault(); const worker=db.workers.find((w)=>w.id===+el('payrollWorker').value); if(!worker) return; const hadir=+el('payrollHadir').value; const lemburJam=+el('payrollLemburJam').value; const potongan=+el('payrollPotongan').value; const bonus=hadir>=24?200000:0; const lembur=lemburJam*25000; const takeHomePay=worker.gajiPokok+worker.tunjangan+lembur+bonus-worker.bpjs-potongan; db.payrolls=[...db.payrolls,{id:nextId(db.payrolls), nama:worker.nama, hadir, lemburJam, potongan, bonus, takeHomePay}]; saveDB(); activateMenu('payroll');}
+function savePayroll(e){e.preventDefault(); const w=db.workers.find((x)=>x.id===+el('payrollWorker').value); if(!w) return; const hadir=+el('payrollHadir').value, izin=+el('payrollIzin').value, sakit=+el('payrollSakit').value, alpha=+el('payrollAlpha').value, lemburJam=+el('payrollLemburJam').value, insentif=+el('payrollInsentif').value, potonganLain=+el('payrollPotonganLain').value; const uangLembur=lemburJam*25000; const bonusHadir=hadir>=24?200000:0; const grossPay=w.gajiPokok+w.tunjanganTetap+w.tunjanganTransport+w.tunjanganMakan+insentif+uangLembur+bonusHadir; const potonganAlpha=alpha*50000; const totalDeduction=w.bpjsKes+w.bpjsTk+potonganAlpha+potonganLain; const takeHomePay=grossPay-totalDeduction; db.payrolls=[...db.payrolls,{id:nextId(db.payrolls),periode:el('payrollPeriode').value,nama:w.nama,hadir,izin,sakit,alpha,lemburJam,insentif,uangLembur,bonusHadir,grossPay,potonganAlpha,totalDeduction,takeHomePay}]; saveDB(); activateMenu('payroll');}
 function deletePayroll(id){db.payrolls=db.payrolls.filter((x)=>x.id!==id); saveDB(); activateMenu('payroll');}
 
-function saveUser(e){e.preventDefault(); const id=+el('userId').value; const data={id:id||nextId(db.users), nama:el('userNama').value, email:el('userEmail').value, role:el('userRole').value}; db.users=id?db.users.map((x)=>x.id===id?data:x):[...db.users,data]; saveDB(); activateMenu('pengaturan');}
-function editUser(id){const u=db.users.find((x)=>x.id===id); el('userId').value=u.id; el('userNama').value=u.nama; el('userEmail').value=u.email; el('userRole').value=u.role;}
-function deleteUser(id){db.users=db.users.filter((x)=>x.id!==id); saveDB(); activateMenu('pengaturan');}
+function saveUser(e){e.preventDefault(); const id=+el('userId').value; const d={id:id||nextId(db.users), nama:el('userNama').value, email:el('userEmail').value, username:el('userUsername').value, jabatan:el('userJabatan').value, role:el('userRole').value, status:el('userStatus').value}; db.users=id?db.users.map((x)=>x.id===id?d:x):[...db.users,d]; saveDB(); activateMenu('pengaturan');}
+function editUser(id){const u=db.users.find((x)=>x.id===id); Object.entries({userId:u.id,userNama:u.nama,userEmail:u.email,userUsername:u.username,userJabatan:u.jabatan,userRole:u.role,userStatus:u.status}).forEach(([k,v])=>el(k).value=v);} function deleteUser(id){db.users=db.users.filter((x)=>x.id!==id); saveDB(); activateMenu('pengaturan');}
 
-window.editClient=editClient; window.deleteClient=deleteClient; window.editWorker=editWorker; window.deleteWorker=deleteWorker; window.deletePayroll=deletePayroll; window.editUser=editUser; window.deleteUser=deleteUser;
+function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`cgm-data-${today()}.json`;a.click();URL.revokeObjectURL(a.href);}
+function importPrompt(){const json=prompt('Paste JSON data:'); if(!json) return; try{const parsed=JSON.parse(json); if(parsed.clients&&parsed.workers&&parsed.payrolls&&parsed.users){db=parsed; saveDB(); activateMenu('dashboard'); alert('Import berhasil');} else alert('Format JSON tidak valid');}catch{alert('JSON tidak valid');}}
+function resetData(){if(confirm('Hapus seluruh data?')){db=structuredClone(defaultDB); saveDB(); activateMenu('dashboard');}}
+
+window.editClient=editClient; window.deleteClient=deleteClient; window.editWorker=editWorker; window.deleteWorker=deleteWorker; window.deletePayroll=deletePayroll; window.editUser=editUser; window.deleteUser=deleteUser; window.exportData=exportData; window.importPrompt=importPrompt; window.resetData=resetData;
 
 document.getElementById('loginForm').addEventListener('submit',(e)=>{e.preventDefault(); el('loginView').classList.add('hidden'); el('dashboardView').classList.remove('hidden'); activateMenu('dashboard');});
 document.getElementById('logoutBtn').addEventListener('click',()=>{el('dashboardView').classList.add('hidden'); el('loginView').classList.remove('hidden');});
 document.getElementById('sidebarMenu').addEventListener('click',(e)=>{const btn=e.target.closest('.menu-item'); if(btn) activateMenu(btn.dataset.menu);});
 
 renderMenu();
+styles.css
+styles.css
+New
++18
+-0
+
+:root { --bg:#0b1220; --panel:#111b2e; --soft:#162742; --text:#e7edf8; --muted:#9aaac8; --accent:#4f8cff; --good:#36d1a5; --danger:#f05454; }
+*{box-sizing:border-box} body{margin:0;font-family:'Inter',sans-serif;background:radial-gradient(circle at top right,#1d3764,var(--bg));color:var(--text)}
+.hidden{display:none!important} .app-shell{min-height:100vh}
+.login-view{min-height:100vh;display:grid;place-items:center;padding:24px}.login-card{width:min(900px,100%);display:grid;grid-template-columns:1.1fr 1fr;gap:28px;padding:36px;border-radius:20px;background:linear-gradient(145deg,rgba(17,27,46,.95),rgba(13,24,42,.95));box-shadow:0 18px 40px rgba(5,10,20,.45)}
+.brand-logo{width:180px}.eyebrow{color:var(--good);font-weight:600}h1{margin:6px 0 10px}.subtitle{color:var(--muted)}
+.login-form{display:grid;gap:12px;align-content:center} label{display:grid;gap:8px;color:var(--muted)} input,select{border:1px solid rgba(154,170,200,.3);background:rgba(255,255,255,.04);color:var(--text);padding:10px;border-radius:8px}
+button{cursor:pointer;border:none;border-radius:8px;padding:10px 12px;font-weight:600;background:linear-gradient(90deg,var(--accent),#75a7ff);color:#fff}
+
+.dashboard-view{display:grid;grid-template-columns:280px 1fr;min-height:100vh}.sidebar{background:rgba(9,17,31,.96);border-right:1px solid rgba(154,170,200,.12);padding:18px 12px;display:flex;flex-direction:column;gap:14px}.sidebar-brand{display:flex;gap:10px;align-items:center}.sidebar-brand img{width:46px}.sidebar-brand span{font-size:12px;color:var(--muted)}
+nav{display:grid;gap:8px}.menu-item{text-align:left;background:transparent;border:1px solid transparent;color:var(--text)}.menu-item.active,.menu-item:hover{background:rgba(79,140,255,.14);border-color:rgba(79,140,255,.4)}.logout-btn{margin-top:auto;background:var(--danger)}
+.content-area{padding:22px}.topbar{display:flex;justify-content:space-between;align-items:center}.topbar p{color:var(--muted)}.profile-pill{background:var(--soft);padding:8px 12px;border-radius:999px}
+
+.menu-content{margin-top:16px}.panel{background:var(--panel);border:1px solid rgba(154,170,200,.14);border-radius:12px;padding:16px}.panel h3{margin-top:0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{background:var(--panel);padding:14px;border:1px solid rgba(154,170,200,.14);border-radius:12px}
+.table{width:100%;border-collapse:collapse}.table th,.table td{border-bottom:1px solid rgba(154,170,200,.18);padding:8px;text-align:left}.table th{color:var(--muted)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.btn-secondary{background:#2f4268}.btn-danger{background:var(--danger)}.btn-good{background:var(--good);color:#07241d}
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.full{grid-column:1/-1}
+@media(max-width:1000px){.login-card{grid-template-columns:1fr}.dashboard-view{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.grid-2,.form-grid{grid-template-columns:1fr}}
