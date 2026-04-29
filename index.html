@@ -6,7 +6,10 @@
     <title>PT. Catur Guna Mandiri | Sistem Outsourcing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -14,11 +17,18 @@
       <section class="login-view" id="loginView">
         <div class="login-card">
           <div class="brand-block">
-            <img src="images/logo-cgm-login.png" alt="Logo PT. Catur Guna Mandiri" class="brand-logo" />
+            <img
+              src="images/logo-cgm-login.png"
+              alt="Logo PT. Catur Guna Mandiri"
+              class="brand-logo"
+            />
             <div>
               <p class="eyebrow">Enterprise Workforce Platform</p>
               <h1>Sistem Manajemen Outsourcing</h1>
-              <p class="subtitle">Kelola klien, tenaga kerja, kehadiran, payroll, dan laporan dalam satu dashboard profesional.</p>
+              <p class="subtitle">
+                Kelola klien, tenaga kerja, kehadiran, payroll, dan laporan
+                dalam satu dashboard profesional.
+              </p>
             </div>
           </div>
 
@@ -45,71 +55,23 @@
               <span>Outsourcing Services</span>
             </div>
           </div>
-          <nav>
-            <button class="menu-item active">Dashboard</button>
-            <button class="menu-item">Ringkasan Eksekutif</button>
-            <button class="menu-item">Client / Mitra</button>
-            <button class="menu-item">Tenaga Kerja</button>
-            <button class="menu-item">Penempatan</button>
-            <button class="menu-item">Kehadiran</button>
-            <button class="menu-item">Payroll</button>
-            <button class="menu-item">Keuangan</button>
-            <button class="menu-item">Laporan</button>
-            <button class="menu-item">Pengaturan</button>
-          </nav>
+          <nav id="sidebarMenu"></nav>
           <button id="logoutBtn" class="logout-btn">Keluar</button>
         </aside>
 
         <div class="content-area">
           <header class="topbar">
             <div>
-              <h2>Dashboard Operasional</h2>
-              <p>Pemantauan real-time layanan tenaga outsourcing untuk seluruh mitra.</p>
+              <h2 id="pageTitle">Dashboard Operasional</h2>
+              <p id="pageSubtitle">
+                Pemantauan real-time layanan tenaga outsourcing untuk seluruh
+                mitra.
+              </p>
             </div>
             <div class="profile-pill">Admin CGM</div>
           </header>
 
-          <section class="cards-grid">
-            <article class="stat-card">
-              <h3>Total Klien Aktif</h3>
-              <p>10 Perusahaan</p>
-              <small>PT. A s.d PT. J</small>
-            </article>
-            <article class="stat-card">
-              <h3>Tenaga Kerja Aktif</h3>
-              <p>1.284 Orang</p>
-              <small>+42 bulan ini</small>
-            </article>
-            <article class="stat-card">
-              <h3>Tingkat Kehadiran</h3>
-              <p>96.8%</p>
-              <small>Update: hari ini</small>
-            </article>
-            <article class="stat-card">
-              <h3>Status Payroll</h3>
-              <p>Siap Diproses</p>
-              <small>Periode April 2026</small>
-            </article>
-          </section>
-
-          <section class="panel-grid">
-            <article class="panel">
-              <h3>Daftar Client / Mitra</h3>
-              <ul class="client-list">
-                <li>PT. A</li><li>PT. B</li><li>PT. C</li><li>PT. D</li><li>PT. E</li>
-                <li>PT. F</li><li>PT. G</li><li>PT. H</li><li>PT. I</li><li>PT. J</li>
-              </ul>
-            </article>
-            <article class="panel">
-              <h3>Aktivitas Terbaru</h3>
-              <ul class="activity-list">
-                <li>Penempatan baru 15 tenaga kerja ke PT. C.</li>
-                <li>Rekap kehadiran shift pagi selesai diproses.</li>
-                <li>Draft laporan keuangan mingguan tersedia.</li>
-                <li>Payroll batch #042 siap approval manajemen.</li>
-              </ul>
-            </article>
-          </section>
+          <section id="contentHost" class="menu-content active"></section>
         </div>
       </section>
     </main>
